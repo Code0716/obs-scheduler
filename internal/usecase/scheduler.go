@@ -22,7 +22,11 @@ func NewScheduler(recorder domain.Recorder, app domain.AppLifecycle) *Scheduler 
 }
 
 func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) error {
-	slog.Info("📅 Plan", "start", startTime.Format("15:04:05"), "stop", stopTime.Format("15:04:05"))
+	slog.Info("📅 Plan", "start", startTime.Format("2006/01/02 15:04:05"), "stop", stopTime.Format("2006/01/02 15:04:05"))
+
+	if stopTime.Before(time.Now()) {
+		return fmt.Errorf("stop time %s is already in the past", stopTime.Format("15:04:05"))
+	}
 
 	// 1. Wait for start time
 	sleep := time.Until(startTime)
@@ -49,7 +53,7 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 	defer s.recorder.Close()
 
 	// 4. Start Recording
-	if err := s.recorder.StartRecording(); err != nil {
+	if err := s.startRecordingWithRetry(ctx); err != nil {
 		return fmt.Errorf("failed to start recording: %w", err)
 	}
 	slog.Info("🎬 Recording started")
@@ -73,9 +77,11 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 	slog.Info("🛑 Recording stopped")
 
 	// 7. Wait for file save (grace period)
-	slog.Info("Waiting for file save...", "duration", "5s")
+	// Since StopRecording now waits for the actual stop event, we can reduce this wait time
+	// or keep a small buffer just in case.
+	slog.Info("Waiting for file save confirmation...", "duration", "1s")
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(1 * time.Second):
 	case <-ctx.Done():
 	}
 
@@ -105,4 +111,25 @@ func (s *Scheduler) connectWithRetry(ctx context.Context) error {
 		}
 	}
 	return fmt.Errorf("failed to connect to OBS after %d attempts", maxRetries)
+}
+
+func (s *Scheduler) startRecordingWithRetry(ctx context.Context) error {
+	maxRetries := 10
+	retryInterval := 2 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		err := s.recorder.StartRecording()
+		if err == nil {
+			return nil
+		}
+		slog.Info("Failed to start recording (OBS might not be ready), retrying...", "attempt", i+1, "error", err)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(retryInterval):
+			// continue
+		}
+	}
+	return fmt.Errorf("failed to start recording after %d attempts", maxRetries)
 }

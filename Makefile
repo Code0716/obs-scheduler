@@ -26,4 +26,4 @@ START ?= 08:44
 STOP ?= 10:00
 
 start-rec:
-	go run cmd/obs-scheduler/main.go -start $(START) -stop $(STOP)
+	go run ./cmd/obs-scheduler -start $(START) -stop $(STOP)

@@ -3,6 +3,7 @@ package macos
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os/exec"
 
 	"obs-scheduler/internal/domain"
@@ -30,10 +31,22 @@ func (a *OBSApp) Start(ctx context.Context) error {
 
 func (a *OBSApp) Stop(ctx context.Context) error {
 	// Use AppleScript to gracefully quit the application
-	script := fmt.Sprintf("quit app \"%s\"", a.appName)
+	script := fmt.Sprintf("tell application \"%s\" to quit", a.appName)
 	cmd := exec.CommandContext(ctx, "osascript", "-e", script)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to stop OBS app (%s): %w", a.appName, err)
+	output, err := cmd.CombinedOutput()
+	if err == nil {
+		return nil
 	}
+
+	// Fallback to pkill if AppleScript fails (e.g. user cancelled or dialog shown)
+	slog.Warn("Failed to quit OBS via AppleScript, trying pkill...", "error", err, "output", string(output))
+
+	// Try to kill by process name "OBS"
+	// Note: appName might be "OBS Studio" but process name is usually "OBS"
+	pkillCmd := exec.CommandContext(ctx, "pkill", "-x", "OBS")
+	if err := pkillCmd.Run(); err != nil {
+		return fmt.Errorf("failed to stop OBS app via pkill: %w (AppleScript error: %s)", err, string(output))
+	}
+
 	return nil
 }

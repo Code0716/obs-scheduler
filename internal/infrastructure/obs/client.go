@@ -13,11 +13,16 @@ import (
 )
 
 const (
-	OpIdentify = 1
-	OpRequest  = 6
+	OpHello           = 0
+	OpIdentify        = 1
+	OpIdentified      = 2
+	OpRequest         = 6
+	OpRequestResponse = 7
 
 	RequestTypeStartRecord = "StartRecord"
 	RequestTypeStopRecord  = "StopRecord"
+
+	OutputStateStopped = "OBS_WEBSOCKET_OUTPUT_STOPPED"
 
 	DefaultWriteDeadline = 15 * time.Second
 )
@@ -50,6 +55,19 @@ type OBSRequest struct {
 type OBSRequestData struct {
 	RequestType string `json:"requestType"`
 	RequestId   string `json:"requestId"`
+}
+
+type OBSRequestResponse struct {
+	Op int `json:"op"`
+	D  struct {
+		RequestType   string `json:"requestType"`
+		RequestId     string `json:"requestId"`
+		RequestStatus struct {
+			Result  bool   `json:"result"`
+			Code    int    `json:"code"`
+			Comment string `json:"comment"`
+		} `json:"requestStatus"`
+	} `json:"d"`
 }
 
 type Client struct {
@@ -109,6 +127,19 @@ func (c *Client) Connect() error {
 	if err != nil {
 		return fmt.Errorf("read identified error: %w", err)
 	}
+
+	var response struct {
+		Op int             `json:"op"`
+		D  json.RawMessage `json:"d"`
+	}
+	if err := json.Unmarshal(msg, &response); err != nil {
+		return fmt.Errorf("unmarshal identified response error: %w", err)
+	}
+
+	if response.Op != OpIdentified {
+		return fmt.Errorf("unexpected op code: %d, response: %s", response.Op, string(msg))
+	}
+
 	slog.Info("Connected to OBS", "identify_response", string(msg))
 
 	return nil
@@ -144,7 +175,48 @@ func (c *Client) StopRecording() error {
 			RequestId:   "stop1",
 		},
 	}
-	return c.writeRequest(req)
+	if err := c.writeRequest(req); err != nil {
+		return err
+	}
+
+	// Wait for recording to actually stop
+	return c.waitForRecordingStopped()
+}
+
+func (c *Client) waitForRecordingStopped() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Set a longer deadline for file saving
+	deadline := time.Now().Add(30 * time.Second)
+	_ = c.conn.SetReadDeadline(deadline)
+
+	for {
+		_, msg, err := c.conn.ReadMessage()
+		if err != nil {
+			return fmt.Errorf("read event error: %w", err)
+		}
+
+		var event struct {
+			Op int `json:"op"`
+			D  struct {
+				EventType string `json:"eventType"`
+				EventData struct {
+					OutputState string `json:"outputState"`
+				} `json:"eventData"`
+			} `json:"d"`
+		}
+
+		if err := json.Unmarshal(msg, &event); err != nil {
+			continue
+		}
+
+		if event.Op == 5 && event.D.EventType == "RecordStateChanged" {
+			if event.D.EventData.OutputState == OutputStateStopped {
+				return nil
+			}
+		}
+	}
 }
 
 func (c *Client) writeRequest(req OBSRequest) error {
@@ -159,7 +231,39 @@ func (c *Client) writeRequest(req OBSRequest) error {
 	if err := c.conn.WriteJSON(req); err != nil {
 		return fmt.Errorf("write json error: %w", err)
 	}
-	return nil
+
+	// Wait for response
+	_ = c.conn.SetReadDeadline(time.Now().Add(DefaultWriteDeadline))
+
+	for {
+		_, msg, err := c.conn.ReadMessage()
+		if err != nil {
+			return fmt.Errorf("read response error: %w", err)
+		}
+
+		var response OBSRequestResponse
+		if err := json.Unmarshal(msg, &response); err != nil {
+			return fmt.Errorf("unmarshal response error: %w", err)
+		}
+
+		if response.Op == OpRequestResponse {
+			if response.D.RequestId == req.D.RequestId {
+				if !response.D.RequestStatus.Result {
+					return fmt.Errorf("request failed: code=%d, comment=%s", response.D.RequestStatus.Code, response.D.RequestStatus.Comment)
+				}
+				return nil
+			}
+			// ID mismatch, ignore
+			continue
+		}
+
+		if response.Op == 5 { // OpEvent
+			// Ignore events
+			continue
+		}
+
+		return fmt.Errorf("unexpected op code: %d, response: %s", response.Op, string(msg))
+	}
 }
 
 func (c *Client) makeAuth(password, salt, challenge string) string {
