@@ -1,0 +1,32 @@
+//go:build wireinject
+// +build wireinject
+
+package main
+
+import (
+	"obs-scheduler/internal/config"
+	"obs-scheduler/internal/domain"
+	"obs-scheduler/internal/infrastructure/macos"
+	"obs-scheduler/internal/infrastructure/obs"
+	"obs-scheduler/internal/usecase"
+
+	"github.com/google/wire"
+)
+
+func InitializeScheduler(cfg *config.Config) (*usecase.Scheduler, func(), error) {
+	wire.Build(
+		provideOBSClient,
+		provideOBSApp,
+		usecase.NewScheduler,
+		wire.Bind(new(domain.Recorder), new(*obs.Client)),
+	)
+	return nil, nil, nil
+}
+
+func provideOBSClient(cfg *config.Config) *obs.Client {
+	return obs.NewClient(cfg.Addr, cfg.Password)
+}
+
+func provideOBSApp(cfg *config.Config) domain.AppLifecycle {
+	return macos.NewOBSApp(cfg.OBSAppName)
+}
