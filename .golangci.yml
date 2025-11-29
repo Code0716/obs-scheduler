@@ -1,0 +1,33 @@
+version: 2
+run:
+  go: '1.25'
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - revive
+    - misspell
+    - ineffassign
+    - unused
+    - gocyclo
+  settings:
+    gocyclo:
+      min-complexity: 15
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+
+exclude:
+  - internal/mock/.*
+  - cmd/obs-scheduler/wire_gen.go
+
+formatters:
+  settings:
+    goimports:
+      local-prefixes: obs-scheduler
