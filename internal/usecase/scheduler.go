@@ -28,10 +28,11 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 		return fmt.Errorf("stop time %s is already in the past", stopTime.Format("15:04:05"))
 	}
 
-	// 1. Wait for start time
-	sleep := time.Until(startTime)
+	// 1. Wait for launch time (10 seconds before start time)
+	launchTime := startTime.Add(-10 * time.Second)
+	sleep := time.Until(launchTime)
 	if sleep > 0 {
-		slog.Info("Waiting for start time...", "duration", sleep)
+		slog.Info("Waiting for launch time...", "duration", sleep, "launchTime", launchTime)
 		select {
 		case <-time.After(sleep):
 			// continue
@@ -51,6 +52,17 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 		return fmt.Errorf("failed to connect to OBS: %w", err)
 	}
 	defer s.recorder.Close()
+
+	// Wait for actual start time if we are early
+	sleep = time.Until(startTime)
+	if sleep > 0 {
+		slog.Info("OBS connected, waiting for start time...", "duration", sleep)
+		select {
+		case <-time.After(sleep):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 
 	// 4. Start Recording
 	if err := s.startRecordingWithRetry(ctx); err != nil {
