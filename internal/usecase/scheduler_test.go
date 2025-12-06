@@ -72,6 +72,7 @@ func TestScheduler_Run(t *testing.T) {
 		stopDelay     time.Duration
 		cancelAfter   time.Duration // if > 0, cancel context after this duration
 		wantErr       bool
+		skipLaunch    bool
 	}{
 		{
 			name: "Success",
@@ -143,13 +144,34 @@ func TestScheduler_Run(t *testing.T) {
 			cancelAfter: 50 * time.Millisecond,
 			wantErr:     true, // ctx.Err()
 		},
+		{
+			name: "Skip Launch",
+			setupRecorder: func() domain.Recorder {
+				return &mockRecorder{
+					connectFunc:        func() error { return nil },
+					startRecordingFunc: func() error { return nil },
+					stopRecordingFunc:  func() error { return nil },
+					closeFunc:          func() error { return nil },
+				}
+			},
+			setupApp: func() domain.AppLifecycle {
+				return &mockAppLifecycle{
+					startFunc: func(ctx context.Context) error { return errors.New("should not be called") },
+					stopFunc:  func(ctx context.Context) error { return errors.New("should not be called") },
+				}
+			},
+			startDelay: 100 * time.Millisecond,
+			stopDelay:  200 * time.Millisecond,
+			wantErr:    false,
+			skipLaunch: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder := tt.setupRecorder()
 			app := tt.setupApp()
-			scheduler := NewScheduler(recorder, app)
+			scheduler := NewScheduler(recorder, app, tt.skipLaunch)
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()

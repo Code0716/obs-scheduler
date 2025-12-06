@@ -19,7 +19,8 @@ import (
 func InitializeScheduler(cfg *config.Config) (*usecase.Scheduler, func(), error) {
 	client := provideOBSClient(cfg)
 	appLifecycle := provideOBSApp(cfg)
-	scheduler := usecase.NewScheduler(client, appLifecycle)
+	bool2 := provideSkipLaunch(cfg)
+	scheduler := usecase.NewScheduler(client, appLifecycle, bool2)
 	return scheduler, func() {
 	}, nil
 }
@@ -32,4 +33,8 @@ func provideOBSClient(cfg *config.Config) *obs.Client {
 
 func provideOBSApp(cfg *config.Config) domain.AppLifecycle {
 	return macos.NewOBSApp(cfg.OBSAppName)
+}
+
+func provideSkipLaunch(cfg *config.Config) bool {
+	return cfg.SkipLaunch
 }

@@ -15,6 +15,7 @@ type Config struct {
 	Addr       string
 	Password   string
 	OBSAppName string
+	SkipLaunch bool
 }
 
 func Load() (*Config, error) {
@@ -23,6 +24,7 @@ func Load() (*Config, error) {
 
 	startFlag := flag.String("start", "08:44", "Recording start time (HH:MM)")
 	stopFlag := flag.String("stop", "10:00", "Recording stop time (HH:MM)")
+	skipLaunchFlag := flag.Bool("skip-launch", false, "Skip launching OBS application")
 	flag.Parse()
 
 	addr := os.Getenv("OBS_ADDR")
@@ -65,5 +67,6 @@ func Load() (*Config, error) {
 		Addr:       addr,
 		Password:   password,
 		OBSAppName: obsAppName,
+		SkipLaunch: *skipLaunchFlag,
 	}, nil
 }

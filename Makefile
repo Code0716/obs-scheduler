@@ -45,3 +45,6 @@ STOP ?= 10:00
 
 start-rec:
 	go run ./cmd/obs-scheduler -start $(START) -stop $(STOP)
+
+start-rec-skip-launch:
+	go run ./cmd/obs-scheduler -start $(START) -stop $(STOP) -skip-launch

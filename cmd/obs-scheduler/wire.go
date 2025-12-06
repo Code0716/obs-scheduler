@@ -17,6 +17,7 @@ func InitializeScheduler(cfg *config.Config) (*usecase.Scheduler, func(), error)
 	wire.Build(
 		provideOBSClient,
 		provideOBSApp,
+		provideSkipLaunch,
 		usecase.NewScheduler,
 		wire.Bind(new(domain.Recorder), new(*obs.Client)),
 	)
@@ -29,4 +30,8 @@ func provideOBSClient(cfg *config.Config) *obs.Client {
 
 func provideOBSApp(cfg *config.Config) domain.AppLifecycle {
 	return macos.NewOBSApp(cfg.OBSAppName)
+}
+
+func provideSkipLaunch(cfg *config.Config) bool {
+	return cfg.SkipLaunch
 }

@@ -10,14 +10,16 @@ import (
 )
 
 type Scheduler struct {
-	recorder domain.Recorder
-	app      domain.AppLifecycle
+	recorder   domain.Recorder
+	app        domain.AppLifecycle
+	skipLaunch bool
 }
 
-func NewScheduler(recorder domain.Recorder, app domain.AppLifecycle) *Scheduler {
+func NewScheduler(recorder domain.Recorder, app domain.AppLifecycle, skipLaunch bool) *Scheduler {
 	return &Scheduler{
-		recorder: recorder,
-		app:      app,
+		recorder:   recorder,
+		app:        app,
+		skipLaunch: skipLaunch,
 	}
 }
 
@@ -42,9 +44,13 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 	}
 
 	// 2. Launch OBS
-	slog.Info("🚀 Launching OBS...")
-	if err := s.app.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start OBS app: %w", err)
+	if !s.skipLaunch {
+		slog.Info("🚀 Launching OBS...")
+		if err := s.app.Start(ctx); err != nil {
+			return fmt.Errorf("failed to start OBS app: %w", err)
+		}
+	} else {
+		slog.Info("🚀 Skipping OBS launch")
 	}
 
 	// 3. Connect to OBS (with retry)
@@ -98,9 +104,11 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 	}
 
 	// 8. Stop OBS
-	slog.Info("👋 Stopping OBS...")
-	if err := s.app.Stop(ctx); err != nil {
-		slog.Error("Failed to stop OBS app", "error", err)
+	if !s.skipLaunch {
+		slog.Info("👋 Stopping OBS...")
+		if err := s.app.Stop(ctx); err != nil {
+			slog.Error("Failed to stop OBS app", "error", err)
+		}
 	}
 
 	return nil
