@@ -39,14 +39,17 @@ func (a *OBSApp) Stop(ctx context.Context) error {
 	}
 
 	// Fallback to pkill if AppleScript fails (e.g. user cancelled or dialog shown)
-	slog.Warn("Failed to quit OBS via AppleScript, trying pkill...", "error", err, "output", string(output))
+	// slog.Warn("Failed to quit OBS via AppleScript, trying pkill...", "error", err, "output", string(output))
 
 	// Try to kill by process name "OBS"
 	// Note: appName might be "OBS Studio" but process name is usually "OBS"
-	pkillCmd := exec.CommandContext(ctx, "pkill", "-x", "OBS")
-	if err := pkillCmd.Run(); err != nil {
-		return fmt.Errorf("failed to stop OBS app via pkill: %w (AppleScript error: %s)", err, string(output))
-	}
+	// pkillCmd := exec.CommandContext(ctx, "pkill", "-x", "OBS")
+	// if err := pkillCmd.Run(); err != nil {
+	// 	return fmt.Errorf("failed to stop OBS app via pkill: %w (AppleScript error: %s)", err, string(output))
+	// }
+
+	// 暫定措置: 強制終了は行わない
+	slog.Warn("Failed to quit OBS via AppleScript; not force-killing to avoid unsafe shutdown", "error", err, "output", string(output))
 
 	return nil
 }

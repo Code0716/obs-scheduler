@@ -110,7 +110,7 @@ func (s *Scheduler) connectWithRetry(ctx context.Context) error {
 	maxRetries := 15
 	retryInterval := 2 * time.Second
 
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		if err := s.recorder.Connect(); err == nil {
 			return nil
 		}
@@ -129,7 +129,7 @@ func (s *Scheduler) startRecordingWithRetry(ctx context.Context) error {
 	maxRetries := 10
 	retryInterval := 2 * time.Second
 
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		err := s.recorder.StartRecording()
 		if err == nil {
 			return nil
