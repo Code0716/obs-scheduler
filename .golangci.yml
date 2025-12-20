@@ -12,16 +12,18 @@ linters:
     - ineffassign
     - unused
     - gocyclo
-
-linters-settings:
-  gocyclo:
-    min-complexity: 15
-  goimports:
-    local-prefixes:
-      - obs-scheduler
+  settings:
+    gocyclo:
+      min-complexity: 15
+    goimports:
+      local-prefixes:
+        - obs-scheduler
 
 issues:
-  exclude-dirs:
-    - internal/mock
-  exclude-files:
-    - cmd/obs-scheduler/wire_gen.go
+  exclude-rules:
+    - path: internal/mock/.*
+      linters:
+        - all
+    - path: cmd/obs-scheduler/wire_gen.go
+      linters:
+        - all
