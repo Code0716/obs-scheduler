@@ -15,14 +15,14 @@ func TestLoad(t *testing.T) {
 	defer func() {
 		os.Args = origArgs
 		if origEnvAddr != "" {
-			os.Setenv("OBS_ADDR", origEnvAddr)
+			_ = os.Setenv("OBS_ADDR", origEnvAddr)
 		} else {
-			os.Unsetenv("OBS_ADDR")
+			_ = os.Unsetenv("OBS_ADDR")
 		}
 		if origEnvPass != "" {
-			os.Setenv("OBS_PASSWORD", origEnvPass)
+			_ = os.Setenv("OBS_PASSWORD", origEnvPass)
 		} else {
-			os.Unsetenv("OBS_PASSWORD")
+			_ = os.Unsetenv("OBS_PASSWORD")
 		}
 	}()
 
@@ -81,7 +81,7 @@ func TestLoad(t *testing.T) {
 			// Set env vars
 			os.Clearenv()
 			for k, v := range tt.env {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 
 			cfg, err := Load()

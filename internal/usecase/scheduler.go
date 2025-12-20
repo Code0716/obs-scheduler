@@ -30,6 +30,23 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 		return fmt.Errorf("stop time %s is already in the past", stopTime.Format("15:04:05"))
 	}
 
+	if err := s.prepareOBS(ctx, startTime); err != nil {
+		return err
+	}
+	defer func() {
+		if err := s.recorder.Close(); err != nil {
+			slog.Error("Failed to close recorder", "error", err)
+		}
+	}()
+
+	if err := s.executeRecording(ctx, startTime, stopTime); err != nil {
+		return err
+	}
+
+	return s.cleanup(ctx)
+}
+
+func (s *Scheduler) prepareOBS(ctx context.Context, startTime time.Time) error {
 	// 1. Wait for launch time (10 seconds before start time)
 	launchTime := startTime.Add(-10 * time.Second)
 	sleep := time.Until(launchTime)
@@ -37,7 +54,6 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 		slog.Info("Waiting for launch time...", "duration", sleep, "launchTime", launchTime)
 		select {
 		case <-time.After(sleep):
-			// continue
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -57,10 +73,13 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 	if err := s.connectWithRetry(ctx); err != nil {
 		return fmt.Errorf("failed to connect to OBS: %w", err)
 	}
-	defer s.recorder.Close()
 
+	return nil
+}
+
+func (s *Scheduler) executeRecording(ctx context.Context, startTime, stopTime time.Time) error {
 	// Wait for actual start time if we are early
-	sleep = time.Until(startTime)
+	sleep := time.Until(startTime)
 	if sleep > 0 {
 		slog.Info("OBS connected, waiting for start time...", "duration", sleep)
 		select {
@@ -70,47 +89,47 @@ func (s *Scheduler) Run(ctx context.Context, startTime, stopTime time.Time) erro
 		}
 	}
 
-	// 4. Start Recording
+	// Start Recording
 	if err := s.startRecordingWithRetry(ctx); err != nil {
 		return fmt.Errorf("failed to start recording: %w", err)
 	}
 	slog.Info("🎬 Recording started")
 
-	// 5. Wait for stop time
+	// Wait for stop time
 	sleep = time.Until(stopTime)
 	if sleep > 0 {
 		slog.Info("Recording... waiting for stop time...", "duration", sleep)
 		select {
 		case <-time.After(sleep):
-			// continue
 		case <-ctx.Done():
 			slog.Info("Context cancelled, stopping recording...")
 		}
 	}
 
-	// 6. Stop Recording
+	// Stop Recording
 	if err := s.recorder.StopRecording(); err != nil {
 		return fmt.Errorf("failed to stop recording: %w", err)
 	}
 	slog.Info("🛑 Recording stopped")
 
-	// 7. Wait for file save (grace period)
-	// Since StopRecording now waits for the actual stop event, we can reduce this wait time
-	// or keep a small buffer just in case.
+	// Wait for file save (grace period)
 	slog.Info("Waiting for file save confirmation...", "duration", "1s")
 	select {
 	case <-time.After(1 * time.Second):
 	case <-ctx.Done():
 	}
 
-	// 8. Stop OBS
+	return nil
+}
+
+func (s *Scheduler) cleanup(ctx context.Context) error {
 	if !s.skipLaunch {
 		slog.Info("👋 Stopping OBS...")
 		if err := s.app.Stop(ctx); err != nil {
 			slog.Error("Failed to stop OBS app", "error", err)
+			return err
 		}
 	}
-
 	return nil
 }
 
