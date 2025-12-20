@@ -15,15 +15,3 @@ linters:
   settings:
     gocyclo:
       min-complexity: 15
-    goimports:
-      local-prefixes:
-        - obs-scheduler
-
-issues:
-  exclude-rules:
-    - path: internal/mock/.*
-      linters:
-        - all
-    - path: cmd/obs-scheduler/wire_gen.go
-      linters:
-        - all
