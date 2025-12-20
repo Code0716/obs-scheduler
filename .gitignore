@@ -1,3 +1,44 @@
+# 環境変数ファイル（機密情報）
 .env
+.env.local
+.env.*.local
+
+# macOS
 .DS_Store
+
+# ビルド成果物
 bin/
+obs-scheduler
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# テスト成果物
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# 一時ファイル
+tmp/
+temp/
+*.tmp
+
+# IDE・エディタ
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Go ワークスペース
+go.work
+go.work.sum
+
+# 依存関係のベンダリング（使用する場合はコメントアウト）
+# vendor/
