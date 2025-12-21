@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -19,9 +17,6 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	// Load .env file if it exists
-	_ = godotenv.Load()
-
 	startFlag := flag.String("start", "08:44", "Recording start time (HH:MM)")
 	stopFlag := flag.String("stop", "10:00", "Recording stop time (HH:MM)")
 	skipLaunchFlag := flag.Bool("skip-launch", false, "Skip launching OBS application")

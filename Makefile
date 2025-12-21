@@ -1,8 +1,6 @@
 # Init .env file
 .PHONY: init
-init: init-env install-tools install-dev-tools
-init-env:
-	cp .env.example .env
+init: install-tools install-dev-tools
 	
 install-tools: install-build-tools install-dev-tools
 	
