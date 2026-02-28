@@ -9,7 +9,7 @@ package main
 import (
 	"obs-scheduler/internal/config"
 	"obs-scheduler/internal/domain"
-	"obs-scheduler/internal/infrastructure/macos"
+	"obs-scheduler/internal/infrastructure/lifecycle"
 	"obs-scheduler/internal/infrastructure/obs"
 	"obs-scheduler/internal/usecase"
 )
@@ -32,7 +32,7 @@ func provideOBSClient(cfg *config.Config) *obs.Client {
 }
 
 func provideOBSApp(cfg *config.Config) domain.AppLifecycle {
-	return macos.NewOBSApp(cfg.OBSAppName)
+	return lifecycle.NewOBSApp(cfg.OBSAppName)
 }
 
 func provideSkipLaunch(cfg *config.Config) bool {
