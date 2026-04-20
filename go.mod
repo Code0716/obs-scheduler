@@ -1,6 +1,6 @@
 module obs-scheduler
 
-go 1.25.5
+go 1.25.9
 
 require github.com/gorilla/websocket v1.5.3
 
