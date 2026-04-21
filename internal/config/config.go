@@ -15,6 +15,7 @@ type Config struct {
 	Addr       string
 	Password   string
 	OBSAppName string
+	OBSAppPath string
 	SkipLaunch bool
 }
 
@@ -42,6 +43,8 @@ func Load() (*Config, error) {
 		obsAppName = "OBS"
 	}
 
+	obsAppPath := os.Getenv("OBS_APP_PATH")
+
 	now := time.Now()
 	parseTargetTime := func(timeStr string) (time.Time, error) {
 		t, err := time.Parse("15:04", timeStr)
@@ -67,6 +70,7 @@ func Load() (*Config, error) {
 		Addr:       addr,
 		Password:   password,
 		OBSAppName: obsAppName,
+		OBSAppPath: obsAppPath,
 		SkipLaunch: *skipLaunchFlag,
 	}, nil
 }

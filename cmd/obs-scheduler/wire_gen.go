@@ -32,7 +32,7 @@ func provideOBSClient(cfg *config.Config) *obs.Client {
 }
 
 func provideOBSApp(cfg *config.Config) domain.AppLifecycle {
-	return lifecycle.NewOBSApp(cfg.OBSAppName)
+	return lifecycle.NewOBSApp(cfg.OBSAppName, cfg.OBSAppPath)
 }
 
 func provideSkipLaunch(cfg *config.Config) bool {

@@ -8,6 +8,6 @@ import (
 )
 
 // NewOBSApp returns the macOS implementation of the AppLifecycle.
-func NewOBSApp(appName string) domain.AppLifecycle {
-	return macos.NewOBSApp(appName)
+func NewOBSApp(appName, appPath string) domain.AppLifecycle {
+	return macos.NewOBSApp(appName, appPath)
 }

@@ -14,18 +14,20 @@ import (
 
 type OBSApp struct {
 	appName string
+	appPath string
 }
 
 // NewOBSApp creates a new instance of OBSApp for Windows.
-func NewOBSApp(appName string) domain.AppLifecycle {
-	return &OBSApp{appName: appName}
+func NewOBSApp(appName, appPath string) domain.AppLifecycle {
+	return &OBSApp{appName: appName, appPath: appPath}
 }
 
 // Start launches the OBS application on Windows.
-// It assumes OBS is installed in the default location.
 func (a *OBSApp) Start(ctx context.Context) error {
-	// Default path for OBS Studio on Windows. This could be made configurable.
-	obsPath := "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe"
+	obsPath := a.appPath
+	if obsPath == "" {
+		obsPath = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe"
+	}
 
 	// Use "cmd /C start" to launch the application without blocking.
 	// The first empty argument "" is for the window title.
