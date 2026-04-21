@@ -13,18 +13,24 @@ import (
 
 type OBSApp struct {
 	appName string
+	appPath string
 }
 
 // NewOBSApp creates a new instance of OBSApp.
-func NewOBSApp(appName string) domain.AppLifecycle {
-	return &OBSApp{appName: appName}
+func NewOBSApp(appName, appPath string) domain.AppLifecycle {
+	return &OBSApp{appName: appName, appPath: appPath}
 }
 
 func (a *OBSApp) Start(ctx context.Context) error {
-	// "open -a OBS" launches the application on macOS
-	// Using "open" command returns immediately after sending the launch request,
-	// so we don't need to worry about blocking.
-	cmd := exec.CommandContext(ctx, "open", "-a", a.appName)
+	var cmd *exec.Cmd
+	if a.appPath != "" {
+		cmd = exec.CommandContext(ctx, "open", a.appPath)
+	} else {
+		// "open -a OBS" launches the application on macOS
+		// Using "open" command returns immediately after sending the launch request,
+		// so we don't need to worry about blocking.
+		cmd = exec.CommandContext(ctx, "open", "-a", a.appName)
+	}
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to start OBS app (%s): %w", a.appName, err)
 	}

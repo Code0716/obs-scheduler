@@ -12,7 +12,7 @@ import (
 type StubApp struct {
 }
 
-func NewOBSApp(appName string) domain.AppLifecycle {
+func NewOBSApp(appName, appPath string) domain.AppLifecycle {
 	return &StubApp{}
 }
 

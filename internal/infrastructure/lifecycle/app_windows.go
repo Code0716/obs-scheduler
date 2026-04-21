@@ -8,6 +8,6 @@ import (
 )
 
 // NewOBSApp returns the Windows implementation of the AppLifecycle.
-func NewOBSApp(appName string) domain.AppLifecycle {
-	return windows.NewOBSApp(appName)
+func NewOBSApp(appName, appPath string) domain.AppLifecycle {
+	return windows.NewOBSApp(appName, appPath)
 }
