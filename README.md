@@ -5,7 +5,7 @@ OBS WebSocket v5 プロトコルを使用して OBS を制御します。
 
 ## 前提条件
 
-- **Go**: 1.25.5 以上
+- **Go**: 1.26.2 以上
 - **OBS Studio**:
   - WebSocket サーバー設定が有効になっていること
   - WebSocket v5 プロトコルを使用
