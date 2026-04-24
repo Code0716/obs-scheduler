@@ -68,6 +68,63 @@ make start-rec
 make start-rec START=19:00 STOP=21:00
 ```
 
+## Windows 11 でのご利用について (Smart App Control 対策)
+
+Windows 11 の **スマートアプリコントロール (SAC)** が有効な環境では、自己ビルドした Go 製 EXE が未署名のためブロックされることがあります。その場合は、Microsoft 署名済みの `powershell.exe` 経由で動作する **PowerShell 版スクリプト** を使用してください。
+
+### 前提条件
+
+- PowerShell 5.1 以上（Windows 11 標準搭載）
+- 追加インストール不要
+
+### 初回セットアップ（実行ポリシーの設定）
+
+PowerShell を開いて以下を **1 回だけ** 実行してください。
+
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### 手動実行
+
+```powershell
+# 基本
+.\obs-scheduler.ps1 -Start "19:00" -Stop "21:00"
+
+# パスワードあり
+.\obs-scheduler.ps1 -Start "19:00" -Stop "21:00" -OBSPassword "yourpass"
+
+# OBS の自動起動・終了をスキップ（OBS を手動で起動済みの場合）
+.\obs-scheduler.ps1 -Start "19:00" -Stop "21:00" -SkipLaunch
+```
+
+| パラメーター   | デフォルト値           | 説明                                    |
+| :------------- | :--------------------- | :-------------------------------------- |
+| `-Start`       | `08:44`                | 録画開始時刻 (HH:mm)                    |
+| `-Stop`        | `10:00`                | 録画停止時刻 (HH:mm)                    |
+| `-OBSAddr`     | `ws://localhost:4455`  | OBS WebSocket アドレス                  |
+| `-OBSPassword` | 環境変数 `OBS_PASSWORD` | OBS WebSocket パスワード                |
+| `-OBSPath`     | 環境変数 `OBS_APP_PATH` | OBS 実行ファイルのパス                  |
+| `-SkipLaunch`  | `$false`               | OBS の自動起動・終了をスキップ          |
+
+### Windowsタスクスケジューラへの登録（毎日自動実行）
+
+**管理者権限の PowerShell** で以下を 1 回実行すると、毎日指定時刻に自動録画するタスクが登録されます。
+
+```powershell
+.\setup-task-scheduler.ps1 -Start "19:00" -Stop "21:00" -OBSPassword "yourpass"
+```
+
+登録したタスクを削除する場合:
+
+```powershell
+.\setup-task-scheduler.ps1 -Remove
+```
+
+タスクの確認は `taskschd.msc`（タスクスケジューラ）から行えます。
+
+---
+
 ## ディレクトリ構造
 
 ```
