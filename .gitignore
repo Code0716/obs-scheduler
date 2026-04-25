@@ -1,7 +1,8 @@
-# 環境変数ファイル（機密情報）
+# 環境変数ファイル・機密情報を含むスクリプト
 .env
 .env.local
 .env.*.local
+start-rec.bat
 
 # macOS
 .DS_Store
