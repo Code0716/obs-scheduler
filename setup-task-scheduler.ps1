@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Windowsタスクスケジューラに obs-scheduler.ps1 を登録するセットアップスクリプト。
     管理者権限で実行してください。
@@ -55,9 +55,9 @@ if (-not (Test-Path $schedulerScript)) {
 }
 
 # ── 引数文字列組み立て ──
-$args = "-NonInteractive -ExecutionPolicy Bypass -File `"$schedulerScript`" -Start `"$Start`" -Stop `"$Stop`""
+$psArgs = "-NonInteractive -ExecutionPolicy Bypass -File `"$schedulerScript`" -Start `"$Start`" -Stop `"$Stop`""
 if ($OBSPassword) {
-    $args += " -OBSPassword `"$OBSPassword`""
+    $psArgs += " -OBSPassword `"$OBSPassword`""
 }
 
 # ── 開始時刻を今日の日付で計算 ──
@@ -68,10 +68,8 @@ if ($triggerTime -lt (Get-Date)) {
 }
 
 # ── タスク定義 ──
-$action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $args
-$trigger = New-ScheduledTaskTrigger -Once -At $triggerTime `
-           -RepetitionInterval (New-TimeSpan -Days 1) `
-           -RepetitionDuration ([TimeSpan]::MaxValue)
+$action  = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $psArgs
+$trigger = New-ScheduledTaskTrigger -Daily -At $triggerTime
 
 $settings = New-ScheduledTaskSettingsSet `
     -ExecutionTimeLimit (New-TimeSpan -Hours 6) `

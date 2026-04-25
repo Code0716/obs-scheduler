@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     OBS録画スケジューラー (PowerShell版)
     Smart App Control 対策として powershell.exe 経由で動作させるバージョン。
@@ -82,7 +82,7 @@ function New-OBSWebSocketClient {
 
     Write-Log "INFO" "OBS WebSocket に接続中..." @{ uri = $Uri }
     try {
-        $ws.ConnectAsync([Uri]$Uri, $ct).GetAwaiter().GetResult()
+        $null = $ws.ConnectAsync([Uri]$Uri, $ct).GetAwaiter().GetResult()
     }
     catch {
         throw "OBS WebSocket への接続に失敗しました: $_"
@@ -97,16 +97,19 @@ function New-OBSWebSocketClient {
 
     Write-Log "DEBUG" "Hello 受信" @{ op = $hello.op }
 
-    # ── 認証ハッシュ生成 ──
-    $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    $salt      = $hello.d.authentication.salt
-    $challenge = $hello.d.authentication.challenge
+    # ── 認証ハッシュ生成（認証無効時はスキップ）──
+    $auth = ""
+    if ($hello.d.authentication) {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $salt      = $hello.d.authentication.salt
+        $challenge = $hello.d.authentication.challenge
 
-    $secretHash = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Password + $salt))
-    $secret     = [Convert]::ToBase64String($secretHash)
-    $authHash   = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($secret + $challenge))
-    $auth       = [Convert]::ToBase64String($authHash)
-    $sha256.Dispose()
+        $secretHash = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Password + $salt))
+        $secret     = [Convert]::ToBase64String($secretHash)
+        $authHash   = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($secret + $challenge))
+        $auth       = [Convert]::ToBase64String($authHash)
+        $sha256.Dispose()
+    }
 
     # ── Identify 送信 (Op=1) ──
     $identify = [ordered]@{
@@ -119,7 +122,7 @@ function New-OBSWebSocketClient {
 
     $sendBytes   = [System.Text.Encoding]::UTF8.GetBytes($identify)
     $sendSegment = [System.ArraySegment[byte]]::new($sendBytes)
-    $ws.SendAsync($sendSegment, [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $ct).GetAwaiter().GetResult()
+    $null = $ws.SendAsync($sendSegment, [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $ct).GetAwaiter().GetResult()
 
     # ── Identified 受信 (Op=2) ──
     $result2  = $ws.ReceiveAsync($segment, $ct).GetAwaiter().GetResult()
@@ -154,7 +157,7 @@ function Send-OBSRequest {
 
     $sendBytes   = [System.Text.Encoding]::UTF8.GetBytes($req)
     $sendSegment = [System.ArraySegment[byte]]::new($sendBytes)
-    $WebSocket.SendAsync($sendSegment, [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $ct).GetAwaiter().GetResult()
+    $null = $WebSocket.SendAsync($sendSegment, [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $ct).GetAwaiter().GetResult()
 
     # レスポンス待機 (Op=7 が来るまでループ)
     $recvBuf = [byte[]]::new(8192)
@@ -171,9 +174,13 @@ function Send-OBSRequest {
                 throw "OBS リクエスト失敗: code=$($resp.d.requestStatus.code) comment=$($resp.d.requestStatus.comment)"
             }
             Write-Log "INFO" "OBS リクエスト成功" @{ requestType = $RequestType }
-            return
+            if ($RequestType -ne "StopRecord") {
+                return
+            }
+            # StopRecord: RecordStateChanged(STOPPED) まで待機してループ継続
+            continue
         }
-        # Op=5 はイベント通知。StopRecord後の RecordStateChanged を待機
+        # Op=5 はイベント通知。StopRecord後の RecordStateChanged(STOPPED) を待機
         if ($resp.op -eq 5 -and $RequestType -eq "StopRecord") {
             if ($resp.d.eventType -eq "RecordStateChanged" -and
                 $resp.d.eventData.outputState -eq "OBS_WEBSOCKET_OUTPUT_STOPPED") {
@@ -189,7 +196,7 @@ function Close-OBSWebSocket {
     param([System.Net.WebSockets.ClientWebSocket]$WebSocket)
     $ct = [System.Threading.CancellationToken]::None
     try {
-        $WebSocket.CloseAsync(
+        $null = $WebSocket.CloseAsync(
             [System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure,
             "Done", $ct
         ).GetAwaiter().GetResult()
